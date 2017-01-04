@@ -1,16 +1,16 @@
 if minetest.is_singleplayer() then
 	minetest.register_on_chat_message(function (name, s)
-		if string.sub(s, 1, 1) == "=" then
-			s = "return " .. string.sub(s, 2)
+		local code, result = loadstring('return ' .. s)
+		if code == nil then
+			code, result = loadstring(s)
 		end
-		local result
-		local status, err = pcall(function()
-			result = loadstring(s)()
-		end)
-		if status then
+		if code then
+			code, result = pcall(code)
+		end
+		if code then
 			minetest.chat_send_player(name, dump(result))
 		else
-			minetest.chat_send_player(name, "ERROR: " .. err)
+			minetest.chat_send_player(name, "ERROR: " .. result)
 		end
 	end)
 end
