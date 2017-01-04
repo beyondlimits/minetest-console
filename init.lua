@@ -1,4 +1,11 @@
 if minetest.is_singleplayer() then
+	local minetest_colorize = minetest.colorize
+	local minetest_chat_send_player = minetest.chat_send_player
+
+	local function colorize(s)
+		return minetest_colorize('#00CCFF', s)
+	end
+
 	minetest.register_on_chat_message(function (name, s)
 		local code, result = loadstring('return ' .. s)
 		if code == nil then
@@ -8,9 +15,9 @@ if minetest.is_singleplayer() then
 			code, result = pcall(code)
 		end
 		if code then
-			minetest.chat_send_player(name, dump(result))
+			minetest_chat_send_player(name, dump(result):gsub('[^\n]*', colorize):gsub('\t', '    '))
 		else
-			minetest.chat_send_player(name, "ERROR: " .. result)
+			minetest_chat_send_player(name, minetest_colorize('#FFCC00', "ERROR: " .. result))
 		end
 	end)
 end
