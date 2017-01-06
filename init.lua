@@ -1,23 +1,21 @@
-if minetest.is_singleplayer() then
-	local minetest_colorize = minetest.colorize
-	local minetest_chat_send_player = minetest.chat_send_player
+-- this mod is not intended for multiplayer
+if not minetest.is_singleplayer() then
+	return
+end
 
-	local function colorize(s)
-		return minetest_colorize('#00CCFF', s)
-	end
+local default_color_result = '#00CCFF'
+local default_color_error  = '#FFCC00'
+local path = minetest.get_modpath(minetest.get_current_modname())
 
-	minetest.register_on_chat_message(function (name, s)
-		local code, result = loadstring('return ' .. s)
-		if code == nil then
-			code, result = loadstring(s)
-		end
-		if code then
-			code, result = pcall(code)
-		end
-		if code then
-			minetest_chat_send_player(name, dump(result):gsub('[^\n]*', colorize):gsub('\t', '    '))
-		else
-			minetest_chat_send_player(name, minetest_colorize('#FFCC00', "ERROR: " .. result))
-		end
-	end)
+console = {}
+
+dofile(path .. '/config.lua')
+dofile(path .. '/console.lua')
+
+if console.enable_helpers then
+	dofile(path .. '/helpers.lua')
+end
+
+if console.imports then
+	dofile(path .. '/imports.lua')
 end
