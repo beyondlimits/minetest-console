@@ -8,12 +8,12 @@ local function colorize(s)
 end
 
 minetest.register_on_chat_message(function (name, s)
-	local code, result = loadstring('return ' .. s)
+	local code, result = loadstring('return ' .. s) -- setfenv
 	if code == nil then
 		code, result = loadstring(s)
 	end
 	if code then
-		code, result = pcall(code)
+		code, result = pcall(code, name, s) -- xpcall
 	end
 	if code then
 		_ = result
