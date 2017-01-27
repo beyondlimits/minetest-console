@@ -24,17 +24,17 @@ function table.values(table)
 	return result
 end
 
-local function table_extend(table, other, ...)
+local function extend(table, other, ...)
 	if other == nil then
 		return table
 	end
 	for key, value in pairs(other) do
 		table[key] = value
 	end
-	return table_extend(table, ...)
+	return extend(table, ...)
 end
 
-table.extend = table_extend
+table.extend = extend
 
 function table.filter(table, callback)
 	local result = {}
@@ -43,5 +43,15 @@ function table.filter(table, callback)
 			result[key] = value
 		end
 	end
+	return result
+end
+
+function math.isnan(x)
+	return not rawequal(x, x)
+end
+
+function pack(...)
+	local result = {...}
+	result.n = select('#', ...)
 	return result
 end
