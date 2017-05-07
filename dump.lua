@@ -11,6 +11,7 @@ local indent_size
 local max_depth
 
 local handlers = {}
+local bucket_order = {'boolean', 'number', 'string'}
 
 local color_unknown   = color('#C99')
 local color_nil       = color('#CCC')
@@ -24,102 +25,115 @@ local color_metatable = color('#FC9')
 local color_muted     = color('#999')
 local color_userdata  = color('#F99')
 
-local function dump_value(table, depth, value, full)
+local function dump_value(sb, depth, value, full)
 	local t = type(value)
 	if handlers[t] == nil then
-		insert(table, color_unknown)
-		insert(t)
-		return table
+		insert(sb, color_unknown)
+		insert(sb, t)
 	else
-		return handlers[t](table, depth, value, full)
+		return handlers[t](sb, depth, value, full)
 	end
 end
 
-local function dump_nil(table, depth, value)
-	insert(table, color_nil)
-	insert(table, 'nil')
+local function dump_nil(sb, depth, value)
+	insert(sb, color_nil)
+	insert(sb, 'nil')
 end;
 
-local function dump_boolean(table, depth, value)
-	insert(table, color_boolean)
-	insert(table, dump(value))
+local function dump_boolean(sb, depth, value)
+	insert(sb, color_boolean)
+	insert(sb, dump(value))
 end
 
-local function dump_number(table, depth, value)
-	insert(table, color_number)
-	insert(table, dump(value))
+local function dump_number(sb, depth, value)
+	insert(sb, color_number)
+	insert(sb, dump(value))
 end
 
-local function dump_string(table, depth, value)
-	insert(table, color_string)
-	insert(table, dump(value))
+local function dump_string(sb, depth, value)
+	insert(sb, color_string)
+	insert(sb, dump(value))
 end
 
-local function dump_function(table, depth, value)
-	insert(table, color_function)
-	insert(table, 'function')
+local function dump_function(sb, depth, value)
+	insert(sb, color_function)
+	insert(sb, 'function')
 end
 
-local function dump_thread(table, depth, value)
-	insert(table, color_thread)
-	insert(table, 'thread')
+local function dump_thread(sb, depth, value)
+	insert(sb, color_thread)
+	insert(sb, 'thread')
 end
 
-local function dump_table_expanded(table, depth, value)
-	local indent = rep(' ', depth * indent_size)
-
-	insert(table, color_table)
-	insert(table, '{')
-
-	if getmetatable(value) ~= nil then
-		insert(table, color_metatable)
-		insert(table, ' contains metatable')
+local function dump_table_elements(sb, depth, indent, value, keys)
+	for k, v in pairs(keys) do
+		insert(sb, indent)
+		dump_value(sb, depth, v, false)
+		insert(sb, color_muted)
+		insert(sb, ' = ')
+		dump_value(sb, depth, value[v], true)
+		insert(sb, '\n')
 	end
+end
 
-	insert(table, '\n')
-
+local function dump_table_expanded(sb, depth, value)
+	local indent = rep(' ', depth * indent_size)
+	local buckets = {}
 	local keys = {}
 
-	for key, value in pairs(value) do
-		insert(keys, key)
+	for k, v in pairs(bucket_order) do
+		buckets[v] = {}
 	end
 
-	pcall(sort, keys)
-
-	for index, key in pairs(keys) do
-		insert(table, indent)
-		dump_value(table, depth, key, false)
-		insert(table, color_muted)
-		insert(table, ' = ')
-		dump_value(table, depth, value[key], true)
-		insert(table, '\n')
+	for k, v in pairs(value) do
+		insert(buckets[type(k)] or keys, k)
 	end
 
-	insert(table, rep(' ', (depth - 1) * indent_size))
-	insert(table, color_table)
-	insert(table, '}')
+	for k, v in pairs(buckets) do
+		sort(v)
+	end
+
+	insert(sb, color_table)
+	insert(sb, '{')
+
+	if getmetatable(value) ~= nil then
+		insert(sb, color_metatable)
+		insert(sb, ' contains metatable')
+	end
+
+	insert(sb, '\n')
+
+	for k, v in pairs(bucket_order) do
+		dump_table_elements(sb, depth, indent, value, buckets[v])
+	end
+
+	dump_table_elements(sb, depth, indent, value, keys)
+
+	insert(sb, rep(' ', (depth - 1) * indent_size))
+	insert(sb, color_table)
+	insert(sb, '}')
 end
 
-local function dump_table(table, depth, value, full)
+local function dump_table(sb, depth, value, full)
 	if full and depth < max_depth then
-		dump_table_expanded(table, depth + 1, value)
+		dump_table_expanded(sb, depth + 1, value)
 	else
-		insert(table, color_table)
-		insert(table, 'table')
+		insert(sb, color_table)
+		insert(sb, 'table')
 
 		if getmetatable(value) ~= nil then
-			insert(table, color_metatable)
-			insert(table, ' contains metatable')
+			insert(sb, color_metatable)
+			insert(sb, ' contains metatable')
 		end
 	end
 end
 
-local function dump_userdata(table, depth, value, full)
-	insert(table, color_userdata)
-	insert(table, 'userdata ')
+local function dump_userdata(sb, depth, value, full)
+	insert(sb, color_userdata)
+	insert(sb, 'userdata ')
 
 	if full and depth < max_depth then
-		dump_table_expanded(table, depth + 1, getmetatable(value))
+		dump_table_expanded(sb, depth + 1, getmetatable(value))
 	end
 end
 
@@ -136,7 +150,7 @@ return function(value, options)
 	indent_size = options.indent_size or 4
 	max_depth = options.max_depth or 1
 
-	local table = {}
-	dump_value(table, 0, value, true)
-	return concat(table, '')
+	local sb = {}
+	dump_value(sb, 0, value, true)
+	return concat(sb)
 end
