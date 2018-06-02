@@ -1,4 +1,7 @@
-local insert = table.insert
+local insert   = table.insert
+local pairs    = pairs
+local rawequal = rawequal
+local select   = select
 
 function table.count(table)
 	local n = 0
