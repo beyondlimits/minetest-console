@@ -1,5 +1,6 @@
 local path = minetest.get_modpath(minetest.get_current_modname())
 
+local after            = minetest.after
 local chat_send_player = minetest.chat_send_player
 local colorize         = minetest.colorize
 local concat           = table.concat
@@ -26,6 +27,12 @@ local function pack(...)
 	local result = {...}
 	result.n = select('#', ...)
 	return result
+end
+
+local function chat_send_player_delayed(name, s)
+	after(0, function()
+		chat_send_player(name, s)
+	end)
 end
 
 local g_environ = {
@@ -99,12 +106,12 @@ minetest.register_on_joinplayer(function(player)
 
 	-- Clears the chat window.
 	environ.clear = function()
-		chat_send_player(name, bunch_of_lfs)
+		chat_send_player_delayed(name, bunch_of_lfs)
 	end
 
 	-- Sends message to player who called it.
 	environ.echo = function(s)
-		chat_send_player(name, s)
+		chat_send_player_delayed(name, s)
 	end
 
 	local function load(name)
@@ -137,7 +144,7 @@ minetest.register_on_chat_message(function(name, s)
 	end
 
 	if f == nil then
-		chat_send_player(name, colorize('#F93', err))
+		chat_send_player_delayed(name, colorize('#F93', err))
 		return
 	end
 
@@ -155,9 +162,9 @@ minetest.register_on_chat_message(function(name, s)
 
 	if f[1] then
 		env._ = f[2]
-		chat_send_player(name, result)
+		chat_send_player_delayed(name, result)
 	else
 		env._e = f[2]
-		chat_send_player(name, '(c@#F93)ERROR: ' .. result)
+		chat_send_player_delayed(name, '(c@#F93)ERROR: ' .. result)
 	end
 end)
