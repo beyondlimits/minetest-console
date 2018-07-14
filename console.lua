@@ -108,7 +108,7 @@ minetest.register_on_joinplayer(function(player)
 	end
 
 	local function load(name)
-		local result, err = loadfile(path .. '/scripts/' .. name)
+		local result, err = loadfile(path .. '/scripts/' .. name .. '.lua')
 
 		if err then
 			error(err)
