@@ -130,6 +130,8 @@ minetest.register_on_leaveplayer(function(player)
 end)
 
 minetest.register_on_chat_message(function(name, s)
+	chat_send_player(name, "]" .. s)
+
 	local f, err = loadstring('return ' .. s)
 
 	if f == nil then
@@ -138,7 +140,7 @@ minetest.register_on_chat_message(function(name, s)
 
 	if f == nil then
 		chat_send_player(name, colorize('#F93', err))
-		return
+		return true
 	end
 
 	local env = envs[name]
@@ -160,4 +162,6 @@ minetest.register_on_chat_message(function(name, s)
 		env._e = f[2]
 		chat_send_player(name, '(c@#F93)ERROR: ' .. result)
 	end
+
+	return true
 end)
