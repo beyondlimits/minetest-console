@@ -14,6 +14,12 @@ local max_depth
 local handlers = {}
 local bucket_order = {'boolean', 'number', 'string'}
 
+if color == nil then
+	function color()
+		return ''
+	end
+end
+
 local color_unknown   = color('#C99')
 local color_nil       = color('#CCC')
 local color_boolean   = color('#9CF')

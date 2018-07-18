@@ -10,6 +10,12 @@ local loadstring         = loadstring
 local pcall              = pcall
 local setfenv            = setfenv -- TODO: polyfill for Lua >= 5.1
 
+if colorize == nil then
+	function colorize(color, message)
+		return text
+	end
+end
+
 -- stuff available for all players
 local common = dofile(path .. '/common.lua')
 
