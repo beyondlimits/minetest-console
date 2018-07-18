@@ -1,144 +1,74 @@
 local path = minetest.get_modpath(minetest.get_current_modname())
 
-local chat_send_player = minetest.chat_send_player
-local colorize         = minetest.colorize
-local concat           = table.concat
-local dump             = dofile(path .. '/dump.lua')
-local find             = string.find
-local getmetatable     = getmetatable
-local insert           = table.insert
-local ipairs           = ipairs
-local loadstring       = loadstring
-local pairs            = pairs
-local pcall            = pcall
-local rep              = string.rep
-local select           = select
-local setfenv          = setfenv
-local setmetatable     = setmetatable
-local sort             = table.sort
-local type             = type
-
--- players' environments
-local envs = {}
+local chat_send_player   = minetest.chat_send_player
+local check_player_privs = minetest.check_player_privs
+local colorize           = minetest.colorize
+local concat             = table.concat
+local dump               = dofile(path .. '/dump.lua')
+local format             = string.format
+local loadstring         = loadstring
+local pcall              = pcall
+local setfenv            = setfenv -- TODO: polyfill for Lua >= 5.1
 
 -- stuff available for all players
-local function pack(...)
-	local result = {...}
-	result.n = select('#', ...)
-	return result
-end
+local common = dofile(path .. '/common.lua')
 
-local g_environ = {
-	gmt  = getmetatable, -- shorthand for getmetatable
-	smt  = setmetatable, -- shorthand for setmetatable
-}
+-- players' individual environments
+-- the table will be populated for player when needed
+local envs = loadfile(path .. '/envs.lua')(common)
 
-local bunch_of_lfs = rep('\n', 500)
+-- players' console modes
+local mode = {}
+local is_singleplayer = minetest.is_singleplayer()
 
 minetest.register_on_joinplayer(function(player)
-	local name = player:get_player_name()
-
-	-- variables available for player which cannot be erased
-	local environ = {
-		me = player,
-		name = name,
-	}
-
-	-- imports to allow using set_node, sin, write etc.
-	-- without direct reference to player.
-	local imports = {environ, g_environ, _G, string, table, io, math, minetest}
-
-	-- player environment
-	local env = setmetatable({}, {
-		-- function for resolving imports
-		__index = function(table, index)
-			local result
-
-			for i, import in ipairs(imports) do
-				local result = import[index]
-				if result ~= nil then
-					return result
-				end
-			end
-		end
-	})
-
-	envs[name] = env
-
-	-- Returns a table with all keys of given table
-	-- matching the given pattern. If no table provided,
-	-- it searches for keys in all imports.
-	environ.hint = function(table, pattern)
-		local result = {}
-		if pattern == nil then
-			pattern = table
-			table = {}
-			for i, import in ipairs(imports) do
-				for key, value in pairs(import) do
-					if find(key, pattern) then
-						table[key] = value
-					end
-				end
-			end
-			for key, value in pairs(table) do
-				insert(result, key)
-			end
-		else
-			if type(table) ~= 'table' then
-				error('Table expected')
-			end
-			for key, value in pairs(table) do
-				if find(key, pattern) then
-					insert(result, key)
-				end
-			end
-		end
-		sort(result)
-		return result
-	end
-
-	-- Clears the chat window.
-	environ.clear = function()
-		chat_send_player(name, bunch_of_lfs)
-	end
-
-	-- Sends message to player who called it.
-	environ.echo = function(s)
-		chat_send_player(name, s)
-	end
-
-	local function load(name)
-		local result, err = loadfile(path .. '/scripts/' .. name .. '.lua')
-
-		if err then
-			error(err)
-		end
-
-		return setfenv(result, env)
-	end
-
-	environ.load = load
-
-	-- Runs a script from scripts directory.
-	environ.run = function(name, ...)
-		return load(name)(...)
-	end
+	mode[player:get_player_name()] = is_singleplayer
 end)
 
 minetest.register_on_leaveplayer(function(player)
-	envs[player:get_player_name()] = nil
+	local name = player:get_player_name()
+	mode[name] = nil
+	envs[name] = nil
 end)
 
-minetest.register_on_chat_message(function(name, s)
-	chat_send_player(name, "]" .. s)
+if not is_singleplayer then
+	minetest.register_chatcommand('console', {
+		params = "",
+		description = "Toggle console mode",
+		privs = {debug = true},
+		func = function(name)
+			local old = mode[name]
+			if old == nil then
+				return false, 'Player not found'
+			else
+				mode[name] = not old
+				return true, format('Console mode is now %s.', old and 'disabled' or 'enabled')
+			end
+		end
+	})
+end
 
-	local f, err = loadstring('return ' .. s)
+local pack = common.pack
+
+minetest.register_on_chat_message(function(name, message)
+	if not (is_singleplayer or (mode[name] and check_player_privs(name, {debug = true}))) then
+		return
+	end
+
+	chat_send_player(name, "]" .. message)
+
+	-- try with "return" first to obtain value returned
+	-- (e.g. player enters "me:getpos()")
+	local f, err = loadstring('return ' .. message)
 
 	if f == nil then
-		f, err = loadstring(s)
+		-- likely a syntax error - try again without "return" keyword
+		-- (e.g. player enters "for k, v in ...")
+		f, err = loadstring(message)
 	end
 
 	if f == nil then
+		-- it was real error then
 		chat_send_player(name, colorize('#F93', err))
 		return true
 	end
@@ -153,14 +83,14 @@ minetest.register_on_chat_message(function(name, s)
 		result[i - 1] = dump(f[i], env)
 	end
 
-	result = concat(result, '(c@#999), ');
+	result = concat(result, colorize('#999', ', '));
 
 	if f[1] then
-		env._ = f[2]
+		env._ = f[2] -- last result
 		chat_send_player(name, result)
 	else
-		env._e = f[2]
-		chat_send_player(name, '(c@#F93)ERROR: ' .. result)
+		env._e = f[2] -- last error
+		chat_send_player(name, colorize('#F93', 'ERROR: ' .. result))
 	end
 
 	return true

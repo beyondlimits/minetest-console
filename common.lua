@@ -3,7 +3,10 @@ local pairs    = pairs
 local rawequal = rawequal
 local select   = select
 
-function table.count(table)
+local common = {}
+
+-- table.count
+function common.count(table)
 	local n = 0
 	for key, value in pairs(table) do
 		n = n + 1
@@ -11,7 +14,8 @@ function table.count(table)
 	return n
 end
 
-function table.keys(table)
+-- table.keys
+function common.keys(table)
 	local result = {}
 	for key, value in pairs(table) do
 		insert(result, key)
@@ -19,7 +23,8 @@ function table.keys(table)
 	return result
 end
 
-function table.values(table)
+-- table.values
+function common.values(table)
 	local result = {}
 	for key, value in pairs(table) do
 		insert(result, value)
@@ -27,6 +32,7 @@ function table.values(table)
 	return result
 end
 
+-- table.extend
 local function extend(table, other, ...)
 	if other == nil then
 		return table
@@ -37,9 +43,10 @@ local function extend(table, other, ...)
 	return extend(table, ...)
 end
 
-table.extend = extend
+common.extend = extend
 
-function table.filter(table, callback)
+-- table.filter
+function common.filter(table, callback)
 	local result = {}
 	for key, value in pairs(table) do
 		if callback(value, key) then
@@ -49,12 +56,17 @@ function table.filter(table, callback)
 	return result
 end
 
-function math.isnan(x)
-	return not rawequal(x, x)
+-- table.pack
+-- TODO: may conflict with Lua >= 5.1
+function common.pack(...)
+	return {n = select('#', ...), ...}
 end
 
-function pack(...)
-	local result = {...}
-	result.n = select('#', ...)
-	return result
+-- math.isnan
+--[[
+function common.isnan(x)
+	return not rawequal(x, x)
 end
+--]]
+
+return common
