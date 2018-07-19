@@ -1,11 +1,12 @@
-local color  = minetest.get_color_escape_sequence
-local concat = table.concat
-local dump   = dump
-local insert = table.insert
-local pairs  = pairs
-local rep    = string.rep
-local sort   = table.sort
-local type   = type
+local color    = minetest.get_color_escape_sequence
+local concat   = table.concat
+local dump     = dump
+local insert   = table.insert
+local pairs    = pairs
+local rep      = string.rep
+local sort     = table.sort
+local tonumber = tonumber
+local type     = type
 
 local indent_size
 local max_depth
@@ -147,8 +148,8 @@ handlers.thread      = dump_thread
 handlers.table       = dump_table
 
 return function(value, options)
-	indent_size = options.indent_size or 4
-	max_depth = options.max_depth or 1
+	indent_size = tonumber(options.indent_size) or 4
+	max_depth = tonumber(options.max_depth) or 1
 
 	local sb = {}
 	dump_value(sb, 0, value, true)
