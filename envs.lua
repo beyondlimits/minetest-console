@@ -12,13 +12,13 @@ local get_player_by_name = minetest.get_player_by_name
 local error              = error
 local find               = string.find
 local format             = string.format
+local insert             = table.insert
 local ipairs             = ipairs
 local loadfile           = loadfile
 local log                = minetest.log
 local pairs              = pairs
 local setfenv            = setfenv -- TODO: polyfill for Lua >= 5.1
 local setmetatable       = setmetatable
-local insert             = table.insert
 local sort               = table.sort
 local type               = type
 
