@@ -1,12 +1,13 @@
-local color    = minetest.get_color_escape_sequence
-local concat   = table.concat
-local dump     = dump
-local insert   = table.insert
-local pairs    = pairs
-local rep      = string.rep
-local sort     = table.sort
-local tonumber = tonumber
-local type     = type
+local color        = minetest.get_color_escape_sequence
+local concat       = table.concat
+local dump         = dump
+local getmetatable = getmetatable
+local insert       = table.insert
+local pairs        = pairs
+local rep          = string.rep
+local sort         = table.sort
+local tonumber     = tonumber
+local type         = type
 
 local indent_size
 local max_depth
@@ -25,6 +26,13 @@ local color_table     = color('#99F')
 local color_metatable = color('#FC9')
 local color_muted     = color('#999')
 local color_userdata  = color('#F99')
+
+local function check_metatable(sb, value)
+	if getmetatable(value) ~= nil then
+		insert(sb, color_metatable)
+		insert(sb, ' contains metatable')
+	end
+end
 
 local function dump_value(sb, depth, value, full)
 	local t = type(value)
@@ -96,12 +104,7 @@ local function dump_table_expanded(sb, depth, value)
 
 	insert(sb, color_table)
 	insert(sb, '{')
-
-	if getmetatable(value) ~= nil then
-		insert(sb, color_metatable)
-		insert(sb, ' contains metatable')
-	end
-
+	check_metatable(sb, value)
 	insert(sb, '\n')
 
 	for k, v in pairs(bucket_order) do
@@ -121,11 +124,7 @@ local function dump_table(sb, depth, value, full)
 	else
 		insert(sb, color_table)
 		insert(sb, 'table')
-
-		if getmetatable(value) ~= nil then
-			insert(sb, color_metatable)
-			insert(sb, ' contains metatable')
-		end
+		check_metatable(sb, value)
 	end
 end
 
